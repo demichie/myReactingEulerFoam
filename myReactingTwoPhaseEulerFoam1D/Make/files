@@ -1,0 +1,3 @@
+myReactingTwoPhaseEulerFoam1D.C
+
+EXE = $(FOAM_USER_APPBIN)/myReactingTwoPhaseEulerFoam1D
