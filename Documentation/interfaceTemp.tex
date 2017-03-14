@@ -1,0 +1,112 @@
+\documentclass[]{report}
+
+
+% Title Page
+\title{}
+\author{}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\end{abstract}
+In 
+\begin{verbatim}
+phaseSystems/PhaseSystems/InterfaceCompositionPhaseChangePhaseSystem/
+InterfaceCompositionPhaseChangePhaseSystem.C 
+\end{verbatim}
+
+the function $correctThermo()$ updates the interfacial temperature $T_f$ by applying one step of Newton's method:
+\begin{verbatim}
+Tf -=
+	(
+        H1*(Tf - pair.phase1().thermo().T())
+        + H2*(Tf - pair.phase2().thermo().T())
+        + mDotL
+    )
+    /(
+        max(H1 + H2 + mDotLPrime, HSmall)
+    );
+\end{verbatim}
+
+The equation to be solved to find $T_f$ is:
+\begin{equation}
+H_1(T_1-T_f)+H_2(T_2-T_f)= mdotL
+\end{equation}
+
+where $H_1$ and $H_2$ are defined in the same file with
+\begin{verbatim}
+volScalarField H1(this->heatTransferModels_[pair][pair.first()]->K());
+volScalarField H2(this->heatTransferModels_[pair][pair.second()]->K());
+\end{verbatim}
+
+The term $mdotL$ and its derivative with respect to $T_f$ ($mdotLPrime$) are calculated before the Newthon's step:
+\begin{verbatim}
+// Add latent heats from forward and backward models
+if (this->interfaceCompositionModels_.found(key12))
+{
+    this->interfaceCompositionModels_[key12]->addMDotL
+    (
+        this->massTransferModels_[pair][pair.first()]->K(),
+        Tf,
+        mDotL,
+        mDotLPrime
+    );
+}
+if (this->interfaceCompositionModels_.found(key21))
+{
+    this->interfaceCompositionModels_[key21]->addMDotL
+    (
+        this->massTransferModels_[pair][pair.second()]->K(),
+        Tf,
+        mDotL, 
+        mDotLPrime
+    );
+}
+\end{verbatim}
+
+
+La funzione $addMDotL$ \`{e} definita nel file 
+\begin{verbatim}
+/interfacialCompositionModels/interfaceCompositionModels/
+interfaceCompositionModel/interfaceCompositionModel.C
+\end{verbatim}
+ed è una funzione di $K$, $T_f$, $mDotL$ e $mDotLPrime$:
+\begin{verbatim}
+forAllConstIter(hashedWordList, this->speciesNames_, iter)
+{
+    volScalarField rhoKDL
+    (
+		thermo_.rhoThermo::rho()
+		*K
+		*D(*iter)
+		*L(*iter, Tf)
+	);
+
+	mDotL += rhoKDL*dY(*iter, Tf);
+	mDotLPrime += rhoKDL*YfPrime(*iter, Tf);
+}
+\end{verbatim}
+dove $D$ \`{e} la mass diffusivity [$m^2 s^{-1}$] e $L$ \`{e} il calore latente specifico [$m^2 s^{-2}$].
+\begin{equation}
+D=\frac{alphah(p,T)}{\rho(p,T)}\frac{1}{Le}; \qquad  L=\Delta H_a
+\end{equation}
+where $alphah/\rho$ is the thermal diffusivity [$m^{2}s^{-1}$], $Le$ (Lewis number) is a dimensionless number defined as the ratio of thermal diffusivity to mass diffusivity and $H_a(p,Tf)$ is the specific enthalpy (to check better).
+
+The equations solved for $T_f$ is derived from a heat balance between the heat transferred between the liquid phase and the interface and the heat transferred between the gas phase and the interface:
+\begin{equation}
+Q_1 = H1(T_f-T_1)-mDot\cdot Ha1(T_f)\qquad Q_2 = H2(T_f-T_2)-mDot\cdot Ha2(T_f)
+\end{equation}
+Because neither heat nor mass can be stored on the phase interface, the overall heat balance must be satisfied
+\begin{equation}
+Q_1+Q_2=0 \Rightarrow  H1(T_f-T_1)-mDot\cdot Ha1(T_f) =  H2(T_f-T_2)-mDot\cdot Ha2(T_f)
+\end{equation}
+Rearraging the terms we obtain 
+\begin{equation}
+H1(T_1-T_f)+H_2(T_2-T_f)=mDot(Ha2-Ha1)
+\end{equation}
+and finally, substituting $L=(Ha2-Ha1)$, we obtain eq. 1.
+
+
+\end{document}          
