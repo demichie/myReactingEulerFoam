@@ -2,22 +2,18 @@
 
 
 % Title Page
-\title{}
+\title{The interfacial Temperature in reactingEulerFoam}
 \author{}
 
 
 \begin{document}
 \maketitle
 
-\begin{abstract}
-\end{abstract}
-In 
+The interfacial temperature, $T_f$, is updated in
 \begin{verbatim}
-phaseSystems/PhaseSystems/InterfaceCompositionPhaseChangePhaseSystem/
-InterfaceCompositionPhaseChangePhaseSystem.C 
+phaseSystems/PhaseSystems/InterfaceCompositionPhaseChangePhaseSystem
 \end{verbatim}
-
-the member function $correctThermo()$ updates the interfacial temperature $T_f$ by applying one step of Newton's method:
+by the member function $correctThermo()$:
 \begin{verbatim}
 Tf -=
 	(
@@ -29,6 +25,7 @@ Tf -=
         max(H1 + H2 + mDotLPrime, HSmall)
     );
 \end{verbatim}
+applying one step of the Newton's method.
 
 The equation to be solved to find $T_f$ is:
 \begin{equation}
@@ -41,7 +38,7 @@ volScalarField H1(this->heatTransferModels_[pair][pair.first()]->K());
 volScalarField H2(this->heatTransferModels_[pair][pair.second()]->K());
 \end{verbatim}
 
-The term $mdotL$ and its derivative with respect to $T_f$ ($mdotLPrime$) are calculated before the Newthon's step:
+The term $mdotL$ and its derivative with respect to $T_f$ ($mdotLPrime$) are calculated before the Newton's step:
 \begin{verbatim}
 // Add latent heats from forward and backward models
 if (this->interfaceCompositionModels_.found(key12))
@@ -66,13 +63,12 @@ if (this->interfaceCompositionModels_.found(key21))
 }
 \end{verbatim}
 
-
-La funzione $addMDotL$ \`{e} definita nel file 
+The function $addMDotL$ is defined in 
 \begin{verbatim}
 /interfacialCompositionModels/interfaceCompositionModels/
 interfaceCompositionModel/interfaceCompositionModel.C
 \end{verbatim}
-ed è una funzione di $K$, $T_f$, $mDotL$ e $mDotLPrime$:
+as a function of $K$, $T_f$, $mDotL$ e $mDotLPrime$:
 \begin{verbatim}
 forAllConstIter(hashedWordList, this->speciesNames_, iter)
 {
@@ -88,11 +84,11 @@ forAllConstIter(hashedWordList, this->speciesNames_, iter)
 	mDotLPrime += rhoKDL*YfPrime(*iter, Tf);
 }
 \end{verbatim}
-dove $D$ \`{e} la mass diffusivity [$m^2 s^{-1}$] e $L$ \`{e} il calore latente specifico [$m^2 s^{-2}$].
+where $D$ is the mass diffusivity [$m^2 s^{-1}$] and $L$ is the specific latent heat [$m^2 s^{-2}$].
 \begin{equation}
 D=\frac{alphah(p,T)}{\rho(p,T)}\frac{1}{Le}; \qquad  L=\Delta H_a
 \end{equation}
-where $alphah/\rho$ is the thermal diffusivity [$m^{2}s^{-1}$], $Le$ (Lewis number) is a dimensionless number defined as the ratio of thermal diffusivity to mass diffusivity and $H_a(p,Tf)$ is the specific enthalpy (to check better).
+where $alphah/\rho$ is the thermal diffusivity [$m^{2}s^{-1}$], $Le$ is the Lewis dimensionless number defined as the ratio of thermal diffusivity to mass diffusivity and $H_a(p,Tf)$ is the specific enthalpy (to check better).
 
 The equations solved for $T_f$ is derived from a heat balance between the heat transferred between the liquid phase and the interface and the heat transferred between the gas phase and the interface:
 \begin{equation}
