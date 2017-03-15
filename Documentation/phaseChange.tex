@@ -1,0 +1,190 @@
+\documentclass[a4paper, 12 pt, fleqn]{article}
+\title{OpenFOAM\textsuperscript{\textregistered} v.3.0.1 \\ {\tt reactingEulerFoam}}
+\author{INGV-Pisa}
+\date{April 2016.}
+\usepackage{syntonly}
+%\syntaxonly
+
+\usepackage{array}
+\usepackage{bm}
+\usepackage{bmpsize}
+\usepackage{booktabs}
+%\usepackage[font = scriptsize, format=hang, labelfont = {sf, bf}]{caption}
+\usepackage{chngpage}
+\usepackage{enumitem}
+\usepackage{eurosym}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{footmisc}
+\usepackage{indentfirst}
+\usepackage{layaureo}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{microtype}
+\usepackage{mparhack}
+\usepackage{showlabels}
+%\usepackage{siunitx}
+%\usepackage{SIunits}
+\usepackage{subfig}
+\usepackage{tabularx}
+\usepackage{tipa}
+%
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+%
+\usepackage{url}
+%\usepackage[english]{varioref}
+\usepackage{xcolor}
+\usepackage{wrapfig}
+\usepackage{cancel} % serve per cancellare termini nelle formule
+%\renewcommand{\CancelColor}{\blue}
+
+
+
+
+\usepackage[latin1]{inputenc}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+
+\usepackage{graphicx}
+
+\usepackage{textcomp}
+\usepackage{verbatim}
+\usepackage{latexsym}
+\usepackage{amsmath, amssymb, amsthm, eucal, multicol}
+\usepackage{esdiff}
+\usepackage{amsfonts}
+
+\usepackage[pagebackref]{hyperref}
+\usepackage[hyperpageref]{backref}
+\renewcommand{\backref}[1]{}
+
+
+%\numberwithin{equation}{section} \numberwithin{figure}{section}
+%\numberwithin{table}{section}
+
+
+\newenvironment{sistema}%
+{\left\lbrace\begin{array}{@{}l@{}}}%
+{\end{array}\right.}
+
+\newcommand{\de}{\mathrm{d}}
+\newcommand{\specialfootnote}[1]{%
+  \begingroup
+    \def\thefootnote{\textdagger}\footnote{#1}%
+    \addtocounter{footnote}{-1}%
+  \endgroup}
+
+\newsavebox{\mybox}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+%\newenvironment{proof}[1][Proof]{\begin{trivlist}
+%\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{definition}[1][Definition]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{example}[1][Example]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{remark}[1][Remark]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+%\newcommand{\qed}{\nobreak \ifvmode \relax \else
+%      \ifdim\lastskip<1.5em \hskip-\lastskip
+%      \hskip1.5em plus0em minus0.5em \fi \nobreak
+%      \vrule height0.75em width0.5em depth0.25em\fi}
+
+
+
+
+\newcommand{\Rey}{\textup{Re}}
+\newcommand{\St}{\textup{St}}
+\newcommand{\Pra}{\textup{Pr}}
+
+\newcommand{\ddt}{\partial_t}
+\newcommand{\Dt}{\textup{D}_t}
+\newcommand{\Dpt}{\textup{D}_{p,t}}
+\newcommand{\ddi}{\partial_i}
+\newcommand{\ddj}{\partial_j}
+\newcommand{\ddk}{\partial_k}
+\newcommand{\Div}{\nabla\cdot}
+
+\newcommand{\Ue}{U_\epsilon}
+\newcommand{\Ta}{T_\alpha}
+\newcommand{\Tb}{T_\beta}
+\newcommand{\Ca}{C_\alpha}
+\newcommand{\Cb}{C_\beta}
+
+
+%\graphicspath{{./grafici/},{./foto/}}
+
+\begin{document}
+\maketitle 
+\begin{abstract}
+....
+\end{abstract}
+
+\section{Mass transfer}
+MassTransfer() function calculates the mass transfer of component j from/to phase i 
+\begin{equation}
+\dot{m} = \rho_i KD \left( Y_f - Y_j \right)
+\end{equation}
+where KD is the mass transfer coefficient, K, multiplied the mass diffusivity, D.
+The function is called twice from YEqns.H, first before solving the transport equations for components in each phase, Y1iEqn and Y2iEqn, and then at the end to update the mass transfer term.
+\begin{lstlisting}
+    // call function massTransfer 
+    autoPtr<phaseSystem::massTransferTable>
+        massTransferPtr(fluid.massTransfer());  
+   ...
+   // call function massTransfer 
+    fluid.massTransfer(); // updates interfacial mass flow rates
+\end{lstlisting}  
+During the first call, the mass transfer term is added to the Y matrix equation as fvm, 
+\begin{lstlisting} 
+            // Implicit transport through the phase
+            *eqns[name] +=
+                phase.rho()*KD*Yf
+              - fvm::Sp(phase.rho()*KD, eqns[name]->psi());
+\end{lstlisting}  
+\begin{equation}
+\frac{ (\rho_i \alpha_i Y_{i,j})^* - (\rho_i \alpha_i Y_{i,j})^0} {\Delta t} + div\left( (\rho_i \alpha_i Y_{i,j}U_i )^* \right) = (\rho_i KD Y_f)^0 - (\rho_i KD Y_f)^*
+\end{equation}             
+The second call updates the value stored in dmdt adding to dmdtExplicit the part depending on the solution of the Y equation, already solved,
+\begin{lstlisting}
+            dmdt -= dmdtSign*phase.rho()*KD*eqns[name]->psi();
+\end{lstlisting}            
+Note that dmdt, before entering into the loop, is initialized with the value of dmdtExplicit 
+\begin{lstlisting}
+        *this->dmdt_[pair] =
+            *this->dmdtExplicit_[pair];
+\end{lstlisting}
+in this way the explicit part used for calculating dmdt corresponds to the explicit part used in the YEqn.  
+
+dmdtSign is "+" for phase 1 and "-" for phase 2, thus for phase 1
+\begin{equation}
+dmdt = dmdtSign*rho*KD*( Yf - Yi ),
+\end{equation}
+and for phase 2
+\begin{equation}
+dmdt = dmdtSign*rho*KD*( Yi - Yf ).
+\end{equation}
+It means that for phase 1, as well as for phase 2, a mass transfer from 2 to 1 is positive and a mass transfer from 1 to 2 is negative.
+
+\section{Mass transfer coefficient}
+
+\section{Mass diffusivity}
+
+\section{$Y_f$}
+
+
+\section{Interface Temperature}
+
+
+\section{code excerpts}
+
+\input{code1}
+
+\end{document}

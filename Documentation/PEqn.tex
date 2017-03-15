@@ -1,0 +1,569 @@
+\documentclass[a4paper, 12 pt, fleqn]{article}
+\title{OpenFOAM\textsuperscript{\textregistered} v.4.0 \\ {\tt RectingTwoPhaseEulerFoam}}
+\author{Simone Colucci, INGV-Pisa}
+\date{April 2016.}
+\usepackage{syntonly}
+%\syntaxonly
+
+\usepackage{array}
+\usepackage{bm}
+\usepackage{bmpsize}
+\usepackage{booktabs}
+%\usepackage[font = scriptsize, format=hang, labelfont = {sf, bf}]{caption}
+\usepackage{chngpage}
+\usepackage{enumitem}
+\usepackage{eurosym}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{footmisc}
+\usepackage{indentfirst}
+\usepackage{layaureo}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{microtype}
+\usepackage{mparhack}
+\usepackage{showlabels}
+%\usepackage{siunitx}
+%\usepackage{SIunits}
+\usepackage{subfig}
+\usepackage{tabularx}
+\usepackage{tipa}
+%
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+%
+\usepackage{url}
+%\usepackage[english]{varioref}
+\usepackage{xcolor}
+\usepackage{wrapfig}
+\usepackage{cancel} % serve per cancellare termini nelle formule
+%\renewcommand{\CancelColor}{\blue}
+
+
+
+
+\usepackage[latin1]{inputenc}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+
+\usepackage{graphicx}
+
+\usepackage{textcomp}
+\usepackage{verbatim}
+\usepackage{latexsym}
+\usepackage{amsmath, amssymb, amsthm, eucal, multicol}
+\usepackage{esdiff}
+\usepackage{amsfonts}
+
+\usepackage[pagebackref]{hyperref}
+\usepackage[hyperpageref]{backref}
+\usepackage{listings}
+\lstset{language=C++,captionpos=b,tabsize=3,frame=lines,keywordstyle=\color{blue},commentstyle=\color{darkgreen},stringstyle=\color{red},numberstyle=\tiny,numbersep=5pt,breaklines=true,showstringspaces=false,basicstyle=\footnotesize,emph={label}}
+
+\renewcommand{\backref}[1]{}
+
+
+%\numberwithin{equation}{section} \numberwithin{figure}{section}
+%\numberwithin{table}{section}
+
+
+\newenvironment{sistema}%
+{\left\lbrace\begin{array}{@{}l@{}}}%
+{\end{array}\right.}
+
+\newcommand{\de}{\mathrm{d}}
+\newcommand{\specialfootnote}[1]{%
+  \begingroup
+    \def\thefootnote{\textdagger}\footnote{#1}%
+    \addtocounter{footnote}{-1}%
+  \endgroup}
+
+\newsavebox{\mybox}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+%\newenvironment{proof}[1][Proof]{\begin{trivlist}
+%\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{definition}[1][Definition]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{example}[1][Example]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{remark}[1][Remark]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+%\newcommand{\qed}{\nobreak \ifvmode \relax \else
+%      \ifdim\lastskip<1.5em \hskip-\lastskip
+%      \hskip1.5em plus0em minus0.5em \fi \nobreak
+%      \vrule height0.75em width0.5em depth0.25em\fi}
+
+
+
+
+\newcommand{\Rey}{\textup{Re}}
+\newcommand{\St}{\textup{St}}
+\newcommand{\Pra}{\textup{Pr}}
+
+\newcommand{\ddt}{\partial_t}
+\newcommand{\Dt}{\textup{D}_t}
+\newcommand{\Dpt}{\textup{D}_{p,t}}
+\newcommand{\ddi}{\partial_i}
+\newcommand{\ddj}{\partial_j}
+\newcommand{\ddk}{\partial_k}
+\newcommand{\Div}{\nabla\cdot}
+
+\newcommand{\Ue}{U_\epsilon}
+\newcommand{\Ta}{T_\alpha}
+\newcommand{\Tb}{T_\beta}
+\newcommand{\Ca}{C_\alpha}
+\newcommand{\Cb}{C_\beta}
+
+
+%\graphicspath{{./grafici/},{./foto/}}
+
+\begin{document}
+\maketitle 
+\begin{abstract}
+ {\tt reactingTwoPhaseEulerFoam} is a segregated semi-implicit solver for a mixture of two interpenetrating continuum phases, characterized by their own volume fraction, velocity and energy/enthalpy fields, with phase change. In the following, the model equations are derived and their implementation is shown .\\
+
+ {\em Note}: this documentation is not approved not endorsed by the OpenFOAM Foundation or by ESI Ltd, the owner of OpenFOAM\textsuperscript{\textregistered}.
+\end{abstract}
+
+
+\section{Pressure equation}
+In a two-phase system the discretized momentum equations for phase 1 and 2 can be written as
+
+\begin{equation} \label{eq1}
+\left[ U_p \right]_1= \left[ \frac{H}{a_p} \right]_1 - \left[ \frac{\alpha_1}{a_p}{\nabla(p)} \right]_1
+\end{equation}
+\begin{equation}\label{eq2}
+\left[ U_p \right]_2= \left[ \frac{H}{a_p} \right]_2 - \left[ \frac{\alpha_1}{a_p}{\nabla(p)} \right]_2\\
+\end{equation}
+
+where $a_p$ indicates the discretization coefficients of the vector velocity $U$ in the center $p$ of the cell and $H$ includes the source terms and the terms depending on the velocity $U$ in the neighbouring cells.
+
+ Continuity equations of the two phases can be rearranged to obtain, for phase 1,
+ 
+\begin{eqnarray}\label{eq3}
+\frac{\partial \alpha_1 \rho_1}{\partial t} + \nabla \cdot \left( \alpha_1 \rho_1 U_1 \right) = \Gamma_{21}^{tot} \nonumber\\
+\frac{\alpha_1}{\rho_1}\frac{\partial \rho_1}{\partial t} + \frac{\partial \alpha_1}{\partial t} + \nabla \cdot \left( \alpha_1 U_1 \right) + \frac{\alpha_1 U_1}{\rho_1} \cdot \nabla \left( \rho_1 \right )= \frac{\Gamma_{21}^{tot}}{\rho_1} \nonumber\\
+\nabla \cdot \left( \alpha_1 U_1 \right) = - \frac{\partial \alpha_1}{\partial t} + \frac{\Gamma_{21}^{tot}}{\rho_1} - \frac{\alpha_1}{\rho_1} \frac{d\rho_1}{dt}.
+\end{eqnarray}
+and for phase $2$ 
+\begin{equation}\label{eq4}
+\nabla \cdot \left( \alpha_2 U_2 \right) = - \frac{\partial \alpha_2}{\partial t} + \frac{\Gamma_{12}^{tot}}{\rho_2} - \frac{\alpha_2}{\rho_2} \frac{d\rho_2}{dt}.
+\end{equation}
+
+The pressure equation is obtained by multiplying Eq. (\ref{eq1}) and (\ref{eq2}) by $\alpha_1$ and $\alpha_2$, by taking the divergence of their sum and combining with Eq. (\ref{eq3}) and ({\ref{eq4})
+
+\begin{eqnarray}\label{eq5}
+\frac{\alpha_1}{\rho_1} \frac{d\rho_1}{dt} + \frac{\alpha_2}{\rho_2} \frac{d\rho_2}{dt} + \nabla \cdot \left[ \frac{\alpha_1 H}{a_p} \right]_1 + \nabla \cdot \left[ \frac{\alpha_2 H}{a_p} \right]_2 +\nonumber\\
+-\nabla \cdot \left[ \frac{\alpha_1 \alpha_1}{a_p}\nabla(p) \right]_1 - \nabla \cdot \left[ \frac{\alpha_2 \alpha_2}{a_p}\nabla(p)  \right]_2  = \frac{\Gamma_{21}^{tot}}{\rho_1} + \frac{\Gamma_{12}^{tot}}{\rho_2}.
+\end{eqnarray}
+
+%
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+\subsection{PEqn.H}
+
+Equation (\ref{eq5}) is implemented as 
+
+\begin{verbatim}
+ pEqnIncomp + pEqnComp1 + pEqnComp2 = 0.
+\end{verbatim}
+
+\begin{lstlisting}[frame=single]  
+        fvScalarMatrix pEqnIncomp
+        (
+            fvc::div(phiHbyA)
+          - fvm::laplacian(rAUf, p_rgh)
+        );
+
+        {
+            fvScalarMatrix pEqn(pEqnIncomp);
+
+            if (pEqnComp1.valid())
+            {
+                pEqn += pEqnComp1();
+            }
+
+            if (pEqnComp2.valid())
+            {
+                pEqn += pEqnComp2();
+            }
+
+            solve
+            (
+                pEqn,
+                mesh.solver(p_rgh.select(pimple.finalInnerIter()))
+            );
+\end{lstlisting}\label{lst1}
+
+ {\tt pEqnComp1} and {\tt pEqnComp2} are given, respectively, by
+ 
+ \begin{equation}\label{eq1c}
+\frac{1}{\rho_1}\left[ \frac{\partial}{\partial t}(\alpha_1 \rho_1) +\nabla \cdot\left({\alpha_1 \rho_1 U_1}\right)- \rho_1 \frac{\partial}{\partial t}(\alpha_1) - \rho_1 \nabla \cdot(\alpha_1 U_1) \right]
+\end{equation}
+
+\begin{lstlisting}[frame=single] 
+
+            pEqnComp1 =
+            (
+                phase1.continuityError()
+              - fvc::Sp(fvc::ddt(alpha1) + fvc::div(alphaPhi1), rho1)
+            )/rho1
+          + (alpha1*psi1/rho1)*correction(fvm::ddt(p_rgh));
+
+\end{lstlisting}\label{lst2}
+
+ \begin{equation}\label{eq2c}
+\frac{1}{\rho_2}\left[ \frac{\partial}{\partial t}(\alpha_2 \rho_2) +\nabla \cdot\left({\alpha_2 \rho_2 U_2}\right)- \rho_2 \frac{\partial}{\partial t}(\alpha_2) - \rho_2 \nabla \cdot(\alpha_2 U_2) \right]
+\end{equation}
+
+\begin{lstlisting}[frame=single] 
+
+            pEqnComp2 =
+            (
+                phase2.continuityError()
+              - fvc::Sp(fvc::ddt(alpha2) + fvc::div(alphaPhi2), rho2)
+            )/rho2
+          + (alpha2*psi2/rho2)*correction(fvm::ddt(p_rgh));
+
+\end{lstlisting}\label{lst2}
+
+where {\tt phase1.continuityError} and {\tt phase2.continuityError} represent the first two terms in (\ref{eq1c}) and (\ref{eq2c}) defined in movingPhaseModel.C 
+
+\begin{lstlisting}[frame=single] 
+ continuityError_ =
+        fvc::ddt(*this, rho) + fvc::div(alphaRhoPhi_)
+       - (this->fluid().fvOptions()(*this, rho)&rho);
+\end{lstlisting}\label{lst3}
+
+Recalling the definition of lagrangian derivative, (\ref{eq1c}) and (\ref{eq2c}) can be written as
+
+\begin{equation}\label{eq3c}
+\frac{\alpha_1}{\rho_1} \frac{d\rho_1}{dt},\\
+\frac{\alpha_2}{\rho_2} \frac{d\rho_2}{dt}
+\end{equation}
+
+that represent the first two terms in the pressure equation (5) .
+
+A correction term is added to {\tt pEqnComp1} and {\tt pEqnComp2} in listing \ref{lst2} 
+
+\begin{equation}\label{eq4c}
+\frac{\alpha_1 \psi_1} {\rho_1}\left[ \frac{dp}{dt} - \left( \frac{dp}{dt} \right)_{old} \right], \\
+\frac{\alpha_2 \psi_2} {\rho_2}\left[ \frac{dp}{dt} - \left( \frac{dp}{dt} \right)_{old} \right]
+\end{equation}
+
+\begin{lstlisting}[frame=single] 
+
+          (alpha1*psi1/rho1)*correction(fvm::ddt(p_rgh));
+
+          [...]
+          
+          (alpha2*psi2/rho2)*correction(fvm::ddt(p_rgh));
+          
+\end{lstlisting}\label{lst4}
+
+Phase change terms in the r.h.s. of Eq. (\ref{eq5}) ($\frac{\Gamma_{21}^{tot}}{\rho_1} + \frac{\Gamma_{12}^{tot}}{\rho_2}$) are  added to {\tt pEqnComp1} and {\tt pEqnComp2}
+
+\begin{lstlisting}[frame=single] 
+    if (fluid.transfersMass())
+    {
+        if (pEqnComp1.valid())
+        {
+            pEqnComp1.ref() -= fluid.dmdt()/rho1;
+        }
+        else
+        {
+            pEqnComp1 = fvm::Su(-fluid.dmdt()/rho1, p_rgh);
+        }
+
+        if (pEqnComp2.valid())
+        {
+            pEqnComp2.ref() += fluid.dmdt()/rho2;
+        }
+        else
+        {
+            pEqnComp2 = fvm::Su(fluid.dmdt()/rho2, p_rgh);
+        }
+    }
+\end{lstlisting}\label{lst6}
+
+where
+
+\begin{equation}\label{eq6c}
+{\tt fluid.dmdt()} = \Gamma_{21}^{tot}, \\
+{\tt -fluid.dmdt()} = \Gamma_{12}^{tot}
+\end{equation}
+
+ {\tt pEqnIncomp} is given by
+ 
+ \begin{equation}\label{eq7c}
+ \nabla \cdot \left[ {\tt phiHbyA} \right] - \nabla \cdot \left[ {\tt rAUf} \nabla \left(p\right) \right]
+ \end{equation}
+ 
+ \begin{lstlisting}[frame=single] 
+         fvScalarMatrix pEqnIncomp
+        (
+            fvc::div(phiHbyA)
+          - fvm::laplacian(rAUf, p_rgh)
+        );
+ \end{lstlisting} \label{lst7}
+
+where {\tt phiHbyA} is the weighted sum of the difference between the predicted fluxes ({\tt phiHbyA1} and {\tt phiHbyA2}) and the buoyancy fluxes ({\tt phig1} and {\tt phig2}) 
+
+\begin{equation}\label{eq8c}
+{\tt phiHbyA} = \alpha_1({\tt phiHbyA1} - {\tt phig1}) + \alpha_2({\tt phiHbyA2} - {\tt phig2})
+\end{equation}
+
+ \begin{lstlisting}[frame=single] 
+    surfaceScalarField phiHbyA
+    (
+        "phiHbyA",
+        alphaf1*(phiHbyA1 - phig1) + alphaf2*(phiHbyA2 - phig2)
+    );
+ \end{lstlisting} \label{lst8}
+ 
+ The predicted flux for phase 1 is given by
+ 
+\begin{equation}\label{eq9c}
+{\tt phiHbyA1} = \frac{1}{\frac{\alpha_1 \rho_1 + Vmf}{\Delta t} + a_{p,1} + Kdf}\left[ \frac{\alpha_1 \rho_1 + Vmf}{\Delta t}U_{old} + H_1 + Vmf\frac{dU_2}{dt} + KdfU_2 \right]
+\end{equation} 
+
+\begin{lstlisting}[frame=single] 
+    phiHbyA1 =
+        rAUf1
+       *(
+            (alphaRhof10 + Vmf)
+           *MRF.absolute(phi1.oldTime())/runTime.deltaT()
+          + fvc::flux(U1Eqn.H())
+          + Vmf*ddtPhi2
+          + Kdf*MRF.absolute(phi2)
+          - Ff1()
+        );
+\end{lstlisting} \label{lst9}
+
+\begin{lstlisting}[frame=single] 
+surfaceScalarField rAUf1
+(
+    IOobject::groupName("rAUf", phase1.name()),
+    1.0
+   /(
+        (alphaRhof10 + Vmf)/runTime.deltaT()
+      + fvc::interpolate(U1Eqn.A())
+      + Kdf
+   )
+);
+\end{lstlisting} \label{lst10}
+
+{\tt Vmf} and {\tt Kdf} are, respectively, virtual mass and drag coefficients. Since the terms in the denominator of {\tt rAUf1} multiply the vector velocity $U$, putting together the momentum transfer terms in Eq. (\ref{eq9c}) we obtain, for phase 1, 
+
+\begin{eqnarray}
+\frac{\alpha_1 \rho_1 + Vmf}{\Delta t}U_1 - \frac{\alpha_1 \rho_1 + Vmf}{\Delta t}U_{1}^{old}  + Vmf\frac{\partial U_2}{\partial t} + Kdf U_1 - Kdf U_2 = ...\\
+...Vmf\left( \frac{\partial U_1}{\partial t} - \frac{\partial U_2}{\partial t} \right) + Kdf\left(U_1 - U_2\right) + \alpha_1 \rho_1 \frac{\partial U_1}{\partial t}
+\end{eqnarray}
+
+Recalling that in the {\tt UEqn } the following terms have been added to {\tt U1Eqn.H()}
+
+\begin{equation}
+Vmf \left[ 2 U_1 \nabla \cdot U_1 + \frac{\partial U_1}{\partial t} \right] - Vmf \left[ 2 U_2 \nabla \cdot U_2 + \frac{\partial U_2}{\partial t} \right]
+\end{equation}
+
+\begin{lstlisting}[frame=single] 
+
+    fvVectorMatrix UgradU1
+    (
+        fvm::div(phi1, U1) - fvm::Sp(fvc::div(phi1), U1)
+      + MRF.DDt(U1)
+    );
+
+    fvVectorMatrix UgradU2
+    (
+        fvm::div(phi2, U2) - fvm::Sp(fvc::div(phi2), U2)
+      + MRF.DDt(U2)
+    );
+    
+    [...]
+    
+    {
+        U1Eqn =
+        (
+            fvm::div(alphaRhoPhi1, U1) - fvm::Sp(fvc::div(alphaRhoPhi1), U1)
+          + fvm::Sp(dmdt12, U1) - dmdt12*U2
+          + MRF.DDt(alpha1*rho1, U1)
+          + phase1.turbulence().divDevRhoReff(U1)
+          + Vm*(UgradU1 - (UgradU2 & U2))            
+        );
+        [...]
+    }
+
+\end{lstlisting}
+
+and using the lagrangian derivatives, it results that the virtual mass term in {\tt PEqn } is given by
+
+\begin{equation}
+2 Vmf \left[ \frac{d U_1}{dt} - \frac{d U_2}{dt} \right].
+\end{equation}
+
+Including implicit part of the momentum transfer terms in the coefficients $a_p$ and the explixit part in $H$, the predicted fluxes can be written as
+\begin{equation}
+ \left[ \frac{\alpha_1 H}{a_p} \right]_1, \\
+ \left[ \frac{\alpha_2 H}{a_p} \right]_2
+\end{equation}
+
+Since we are solving for $p - \rho g h$, the buoyancy flux {\tt phig} in (\ref{lst8}) has to be removed 
+\begin{lstlisting}[frame=single] 
+
+    surfaceScalarField ghSnGradRho
+    (
+        "ghSnGradRho",
+        ghf*fvc::snGrad(rho)*mesh.magSf()
+    );
+    
+    surfaceScalarField phig1
+    (
+        IOobject::groupName("phig", phase1.name()),
+        alpharAUf1
+       *(
+            ghSnGradRho
+          - alphaf2*(rhof1 - rhof2)*(g & mesh.Sf())
+        )
+    );
+
+
+    surfaceScalarField phig2
+    (
+        IOobject::groupName("phig", phase2.name()),
+        alpharAUf2
+       *(
+            ghSnGradRho
+          - alphaf1*(rhof2 - rhof1)*(g & mesh.Sf())
+        )
+    );
+    
+\end{lstlisting}
+
+Finally, {\tt pEqnIncomp} in Eq. (\ref{eq7c}) reads
+
+\begin{equation}
+\nabla \cdot \left[ \frac{\alpha_1 H}{a_p} \right]_1 + \nabla \cdot \left[ \frac{\alpha_2 H}{a_p} \right]_2 - \nabla \cdot \left[ \frac{\alpha_1 \alpha_1}{a_p}\nabla(p) \right]_1 - \nabla \cdot \left[ \frac{\alpha_2 \alpha_2}{a_p}\nabla(p)  \right]_2. 
+\end{equation}
+
+ After solving for the PEqn, fluxes, static pressure and density are updated. 
+ 
+\begin{lstlisting}[frame=single] 
+            phi = phiHbyA + pEqnIncomp.flux();
+
+            surfaceScalarField phi1s
+            (
+                phiHbyA1
+              + alpharAUf1*mSfGradp
+              - rAUf1*Kdf*MRF.absolute(phi2)
+            );
+
+            surfaceScalarField phi2s
+            (
+                phiHbyA2
+              + alpharAUf2*mSfGradp
+              - rAUf2*Kdf*MRF.absolute(phi1)
+            );
+
+            surfaceScalarField phir
+            (
+                ((phi2s + rAUf2*Kdf*phi1s) - (phi1s + rAUf1*Kdf*phi2s))
+               /(1.0 - rAUf1*rAUf2*sqr(Kdf))
+            );
+
+            phi1 = phi - alphaf2*phir;
+            phi2 = phi + alphaf1*phir;
+            
+%\end{lstlisting} 
+
+\begin{lstlisting}[frame=single] 
+
+    p = max(p_rgh + rho*gh, pMin);
+
+    p_rgh = p - rho*gh;
+
+    rho1 += psi1*(p_rgh - p_rgh_0);
+    rho2 += psi2*(p_rgh - p_rgh_0);
+
+    rho = fluid.rho();
+    p_rgh = p - rho*gh;
+
+\end{lstlisting}  
+
+
+
+\newpage
+\appendix
+%\section{Mathematical symbols}
+%
+%\begin{tabular}{ll}
+%\toprule
+%Symbol & meaning \\
+%\midrule
+%$\alpha $ & volume fraction\\
+%$\rho  $ & density (obeys an equation of state)\\
+%$e$       & specific internal energy (per unit of volume)\\
+%$k$       & specific kinetic energy (per unit of volume)\\
+%$h$       & specific enthalpy (per unit of volume)\\
+%$T$       & temperature\\
+%$p$       & Continuous phase pressure\\
+%$p_D$     & dispersive pressure\\
+%$\mathbf{U}$ & velocity vector\\
+%$\mathbf{R^{\rm eff}}$ & Effective stress tensor (viscous + turbulent)\\
+%$\mathbf{F}$   & Momentum transfer terms\\
+%$\mathbf{S}$ & Deviatoric stress tensor \\
+%$\mathbf q$  & Conductive heat flux\\
+%$\mathbf{g}$ & gravitational acceleration\\
+%$\nu_i$        & kinematic (first) viscosity coefficient\\
+%$\lambda_i$    & kinematic (second) viscosity coefficient\\
+%$\mathrm{Pr}$& (turbulent) Prandtl number \\
+%$D_T$          & Dispersive (granular) energy flux coefficient\\
+%$K$            & Momentum/Heat transport coefficients\\
+%$C_p$          & Specific heat at constant pressure\\
+%$C_v$          & Specific heat at constant volume\\
+%\midrule
+%Subscripts & \\
+%\midrule
+%1 & phase 1\\
+%2 & phase 2\\
+%$r$ & relative (velocity) \\
+%$i$ & generic phase $i$ \\
+%$d$ & Drag \\
+%$l$ & Lift \\
+%$vm$& Virtual Mass \\
+%$wl$& Wall Lubrication \\
+%$td$& Turbulent Diffusion \\
+%$ht$& Conductive Heat Transfer\\
+%\bottomrule
+%\end{tabular}
+%\newpage
+%
+%\section{Scalar and vector fields}
+%\begin{tabular}{lll}
+%\toprule
+%{volScalarField} & Formula \\
+%\midrule
+%{\tt rAU1}         & $\displaystyle \frac{1}{a_{1p}}$\\[5mm]
+%{\tt alpharAUf1}   & $\displaystyle \frac{\alpha_1}{a_{1p}}$ \\[5mm]
+%{\tt} D            & $\displaystyle D_{td}$ \\
+%{\tt}  & $\displaystyle $ \\
+%{\tt}  & $\displaystyle $ \\
+%{\tt}  & $\displaystyle $ \\
+%{\tt}  & $\displaystyle $ \\
+%{\tt}  & $\displaystyle $ \\
+%{\tt}  & $\displaystyle $ \\
+%\midrule
+%{surfaceScalarField} & Formula \\
+%\bottomrule
+%\end{tabular}
+%\newpage
+
+
+
+\end{document}

@@ -192,6 +192,34 @@ massTransfer() const
 
 
 template<class BasePhaseSystem>
+Foam::tmp<Foam::volScalarField>
+Foam::InterfaceCompositionPhaseChangePhaseSystem<BasePhaseSystem>::Yfd
+(
+    const phasePairKey& key,
+    const phasePairKey& key12,
+    const word& member    
+) const
+{
+    
+    const volScalarField Tf(*this->Tf_[key]);
+    
+    if (this->interfaceCompositionModels_.found(key12))
+    {    
+        const volScalarField Yf
+        (
+            interfaceCompositionModels_[key12]->Yf(member, Tf)
+        );
+
+        return Yf*1.;
+    }
+    else
+    {
+        return Tf*0;
+    }
+}
+
+
+template<class BasePhaseSystem>
 void Foam::InterfaceCompositionPhaseChangePhaseSystem<BasePhaseSystem>::
 correctThermo()
 {

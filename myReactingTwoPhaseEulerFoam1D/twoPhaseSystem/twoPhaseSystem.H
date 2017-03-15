@@ -44,6 +44,7 @@ namespace Foam
 
 class dragModel;
 class virtualMassModel;
+//class interfaceCompositionModel;
 
 /*---------------------------------------------------------------------------*\
                          Class twoPhaseSystem Declaration
@@ -54,7 +55,7 @@ class twoPhaseSystem
     public phaseSystem
 {
     // Private member functions
-
+        
         //- Return the drag coefficient for phase pair
         virtual tmp<volScalarField> Kd(const phasePairKey& key) const = 0;
 
@@ -161,7 +162,10 @@ public:
 
         //- Return the mass transfer matrices
         virtual autoPtr<massTransferTable> massTransfer() const = 0;
-
+        
+        //- Return the interface mass fraction
+        virtual tmp<volScalarField> Yfd(const phasePairKey& key, const phasePairKey& key12,const word& member) const ;
+        
         using phaseSystem::sigma;
 
         //- Return the surface tension coefficient

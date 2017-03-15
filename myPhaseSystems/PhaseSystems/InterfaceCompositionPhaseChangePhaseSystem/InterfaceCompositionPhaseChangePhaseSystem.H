@@ -95,6 +95,9 @@ public:
         //- Return the mass transfer matrices
         virtual autoPtr<phaseSystem::massTransferTable> massTransfer() const;
 
+        //- Return the interface mass fraction 
+        virtual tmp<volScalarField> Yfd(const phasePairKey& key, const phasePairKey& key12, const word& member) const;
+        
         //- Correct the thermodynamics
         virtual void correctThermo();
 

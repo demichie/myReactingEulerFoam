@@ -26,6 +26,7 @@ License
 #include "twoPhaseSystem.H"
 #include "dragModel.H"
 #include "virtualMassModel.H"
+#include "interfaceCompositionModel.H"
 
 #include "MULES.H"
 #include "subCycle.H"
@@ -74,6 +75,16 @@ Foam::twoPhaseSystem::~twoPhaseSystem()
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
+
+Foam::tmp<Foam::volScalarField>
+Foam::twoPhaseSystem::Yfd(const phasePairKey& key, const phasePairKey& key12,const word& member) const
+{
+     return Yfd
+     (
+            key, key12, member
+     );
+}          
+
 
 Foam::tmp<Foam::volScalarField>
 Foam::twoPhaseSystem::sigma() const
