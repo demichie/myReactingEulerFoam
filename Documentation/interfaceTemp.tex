@@ -25,10 +25,10 @@ Tf -=
         max(H1 + H2 + mDotLPrime, HSmall)
     );
 \end{verbatim}
-applying one step of the Newton's method.
+applying one step of the Newton's method ($T_f^{n+1}=T_f^{n}-\frac{G(T_f^{n})}{G'(T_f^{n})}$).
 
-The equation to be solved to find $T_f$ is:
-\begin{equation}
+The equation $G(T_f)$ to be solved to find $T_f$ is:
+\begin{equation}\label{EQ:Tf}
 H_1(T_1-T_f)+H_2(T_2-T_f)= mdotL
 \end{equation}
 
@@ -85,14 +85,14 @@ forAllConstIter(hashedWordList, this->speciesNames_, iter)
 }
 \end{verbatim}
 where $D$ is the mass diffusivity [$m^2 s^{-1}$] and $L$ is the specific latent heat [$m^2 s^{-2}$].
-\begin{equation}
-D=\frac{alphah(p,T)}{\rho(p,T)}\frac{1}{Le}; \qquad  L=\Delta H_a
+\begin{equation}\label{EQ:DL}
+D=\frac{alphah(p,T)}{\rho(p,T)}\frac{1}{Le}; \qquad  L=\Delta H_a.
 \end{equation}
-where $alphah/\rho$ is the thermal diffusivity [$m^{2}s^{-1}$], $Le$ is the Lewis dimensionless number defined as the ratio of thermal diffusivity to mass diffusivity and $H_a(p,Tf)$ is the specific enthalpy (to check better).
+In Eqs. (\ref{EQ:DL}) $alphah/\rho$ is the thermal diffusivity [$m^{2}s^{-1}$], $Le$ is the Lewis dimensionless number defined as the ratio of thermal diffusivity to mass diffusivity and $H_a(p,Tf)$ is the specific enthalpy (to check better).
 
 The equations solved for $T_f$ is derived from a heat balance between the heat transferred between the liquid phase and the interface and the heat transferred between the gas phase and the interface:
 \begin{equation}
-Q_1 = H1(T_f-T_1)-mDot\cdot Ha1(T_f)\qquad Q_2 = H2(T_f-T_2)-mDot\cdot Ha2(T_f)
+Q_1 = H1(T_f-T_1)-mDot\cdot Ha1(T_f),\quad Q_2 = H2(T_f-T_2)-mDot\cdot Ha2(T_f).
 \end{equation}
 Because neither heat nor mass can be stored on the phase interface, the overall heat balance must be satisfied
 \begin{equation}
@@ -102,7 +102,7 @@ Rearraging the terms we obtain
 \begin{equation}
 H1(T_1-T_f)+H_2(T_2-T_f)=mDot(Ha2-Ha1)
 \end{equation}
-and finally, substituting $L=(Ha2-Ha1)$, we obtain eq. 1.
+and finally, substituting $L=(Ha2-Ha1)$, we obtain Eq. (\ref{EQ:Tf}).
 
 
 \end{document}          

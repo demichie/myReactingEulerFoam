@@ -1,0 +1,4 @@
+./Documentations/*.aux
+./Documentations/*.log
+./Documentations/*gz
+
