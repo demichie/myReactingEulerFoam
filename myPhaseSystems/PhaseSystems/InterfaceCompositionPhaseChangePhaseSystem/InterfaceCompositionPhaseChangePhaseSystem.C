@@ -22,7 +22,6 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 \*---------------------------------------------------------------------------*/
-
 #include "InterfaceCompositionPhaseChangePhaseSystem.H"
 #include "interfaceCompositionModel.H"
 
@@ -288,8 +287,44 @@ correctThermo()
 	float meanTfResidualPrev=1e15;
 
         float relChangeMax=0.95;
+	
+        volScalarField TfResidual
+        (
+            IOobject
+            (
+                "TfResidual",
+                this->mesh().time().timeName(),
+                this->mesh()
+            ),
+            this->mesh(),
+            dimensionedScalar("zero", dimEnergy/dimVolume/dimTime, 0)
+        );
 
-	volScalarField TfResidual = 0.0*mDotL;
+        volScalarField deltaTfMax
+        (
+            IOobject
+            (
+                "deltaTfMax",
+                this->mesh().time().timeName(),
+                this->mesh()
+            ),
+            this->mesh(),
+            dimensionedScalar("zero", dimTemperature, 0)
+        );
+
+        volScalarField deltaTfMin
+        (
+            IOobject
+            (
+                "deltaTfMin",
+                this->mesh().time().timeName(),
+                this->mesh()
+            ),
+            this->mesh(),
+            dimensionedScalar("zero", dimTemperature, 0)
+        );
+	
+	// const volScalarField TfResidual = 0.0*mDotL;
 
 
 	for (iterTf=0; iterTf<10; iterTf++)
@@ -378,8 +413,8 @@ correctThermo()
             << endl;
 
 
-	volScalarField deltaTfMax = Tf-max(pair.phase1().thermo().T(),pair.phase2().thermo().T());
-	volScalarField deltaTfMin = Tf-min(pair.phase1().thermo().T(),pair.phase2().thermo().T());
+	deltaTfMax = Tf-max(pair.phase1().thermo().T(),pair.phase2().thermo().T());
+	deltaTfMin = Tf-min(pair.phase1().thermo().T(),pair.phase2().thermo().T());
 
         Info<< "deltaTf." << pair.name()
             << ": min = " << min(deltaTfMin.primitiveField())

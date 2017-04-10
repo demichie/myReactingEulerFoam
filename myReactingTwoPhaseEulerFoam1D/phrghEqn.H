@@ -216,7 +216,9 @@ if (pimple.dict().lookupOrDefault<bool>("hydrostaticInitialization", false))
             }
             
             // calculate the gas volume fraction
-            volScalarField rRho = rhol/rhog;
+            volScalarField rRho("rRho",zero);
+            rRho = rhol/rhog;
+            //volScalarField rRho = rhol/rhog;
             
             alphag = Ygphase*rRho / ( one-Ygphase+Ygphase*rRho ); 
             alphal = one - alphag; 
@@ -377,7 +379,9 @@ if (pimple.dict().lookupOrDefault<bool>("hydrostaticInitialization", false))
             }
             
             // calculate the gas volume fraction
-            volScalarField rRho = rhol/rhog;
+	    volScalarField rRho("rRho",zero);
+            rRho = rhol/rhog;
+	    // volScalarField rRho = rhol/rhog;
             
             alphag = Ygphase*rRho / ( one-Ygphase+Ygphase*rRho ); 
             alphal = one - alphag; 
@@ -573,7 +577,9 @@ if (pimple.dict().lookupOrDefault<bool>("hydrostaticInitialization", false))
             }
             
             // calculate the gas volume fraction
-            volScalarField rRho = rhol/rhog;
+            volScalarField rRho("rRho",zero);
+            rRho = rhol/rhog;
+	    // volScalarField rRho = rhol/rhog;
             
             alphag = Ygphase*rRho / ( one-Ygphase+Ygphase*rRho ); 
             alphal = one - alphag; 
