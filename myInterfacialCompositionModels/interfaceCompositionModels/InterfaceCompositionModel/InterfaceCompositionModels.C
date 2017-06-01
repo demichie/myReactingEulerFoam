@@ -33,6 +33,7 @@ License
 #include "NonRandomTwoLiquid.H"
 #include "Raoult.H"
 #include "Saturated.H"
+#include "ReadTable.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -141,6 +142,34 @@ namespace Foam
     makeSpecieInterfaceCompositionType
     (
         Henry,
+        heRhoThermo,
+        rhoReactionThermo,
+        multiComponentMixture,
+        constFluidEThermoPhysics,
+        heRhoThermo,
+        rhoReactionThermo,
+        multiComponentMixture,
+        constGasEThermoPhysics
+    );
+
+    // multi-component gas in the presence of a multi-component liquid
+    makeSpecieInterfaceCompositionType
+    (
+        ReadTable,
+        heRhoThermo,
+        rhoReactionThermo,
+        multiComponentMixture,
+        constGasEThermoPhysics,
+        heRhoThermo,
+        rhoReactionThermo,
+        multiComponentMixture,
+        constFluidEThermoPhysics
+    );
+
+    // multi-component liquid in the presence of a multi-component gas
+    makeSpecieInterfaceCompositionType
+    (
+        ReadTable,
         heRhoThermo,
         rhoReactionThermo,
         multiComponentMixture,
