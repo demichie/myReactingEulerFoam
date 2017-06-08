@@ -1,0 +1,692 @@
+\documentclass[a4paper, 12 pt, fleqn]{article}
+\title{OpenFOAM\textsuperscript{\textregistered} v.4.0 \\ {\tt RectingTwoPhaseEulerFoam:} \\ {\tt class ReadTable}}
+\author{Simone Colucci, INGV-Pisa}
+\date{June 2017.}
+\usepackage{syntonly}
+%\syntaxonly
+
+\usepackage{array}
+\usepackage{bm}
+\usepackage{bmpsize}
+\usepackage{booktabs}
+%\usepackage[font = scriptsize, format=hang, labelfont = {sf, bf}]{caption}
+\usepackage{chngpage}
+\usepackage{enumitem}
+\usepackage{eurosym}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{footmisc}
+\usepackage{indentfirst}
+\usepackage{layaureo}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{microtype}
+\usepackage{mparhack}
+\usepackage{showlabels}
+%\usepackage{siunitx}
+%\usepackage{SIunits}
+\usepackage{subfig}
+\usepackage{tabularx}
+\usepackage{tipa}
+%
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+%
+\usepackage{url}
+%\usepackage[english]{varioref}
+\usepackage{xcolor}
+\usepackage{wrapfig}
+\usepackage{cancel} % serve per cancellare termini nelle formule
+%\renewcommand{\CancelColor}{\blue}
+
+
+
+
+\usepackage[latin1]{inputenc}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+
+\usepackage{graphicx}
+
+\usepackage{textcomp}
+\usepackage{verbatim}
+\usepackage{latexsym}
+\usepackage{amsmath, amssymb, amsthm, eucal, multicol}
+\usepackage{esdiff}
+\usepackage{amsfonts}
+
+\usepackage[pagebackref]{hyperref}
+\usepackage[hyperpageref]{backref}
+\usepackage{mathtools}
+\renewcommand{\backref}[1]{}
+
+
+%\numberwithin{equation}{section} \numberwithin{figure}{section}
+%\numberwithin{table}{section}
+
+
+\newenvironment{sistema}%
+{\left\lbrace\begin{array}{@{}l@{}}}%
+{\end{array}\right.}
+
+\newcommand{\de}{\mathrm{d}}
+\newcommand{\specialfootnote}[1]{%
+  \begingroup
+    \def\thefootnote{\textdagger}\footnote{#1}%
+    \addtocounter{footnote}{-1}%
+  \endgroup}
+
+\newsavebox{\mybox}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+%\newenvironment{proof}[1][Proof]{\begin{trivlist}
+%\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{definition}[1][Definition]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{example}[1][Example]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{remark}[1][Remark]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+%\newcommand{\qed}{\nobreak \ifvmode \relax \else
+%      \ifdim\lastskip<1.5em \hskip-\lastskip
+%      \hskip1.5em plus0em minus0.5em \fi \nobreak
+%      \vrule height0.75em width0.5em depth0.25em\fi}
+
+
+
+
+\newcommand{\Rey}{\textup{Re}}
+\newcommand{\St}{\textup{St}}
+\newcommand{\Pra}{\textup{Pr}}
+
+\newcommand{\ddt}{\partial_t}
+\newcommand{\Dt}{\textup{D}_t}
+\newcommand{\Dpt}{\textup{D}_{p,t}}
+\newcommand{\ddi}{\partial_i}
+\newcommand{\ddj}{\partial_j}
+\newcommand{\ddk}{\partial_k}
+\newcommand{\Div}{\nabla\cdot}
+
+\newcommand{\Ue}{U_\epsilon}
+\newcommand{\Ta}{T_\alpha}
+\newcommand{\Tb}{T_\beta}
+\newcommand{\Ca}{C_\alpha}
+\newcommand{\Cb}{C_\beta}
+
+\begin{document}
+\lstset{language=C++,
+                basicstyle=\ttfamily\scriptsize,
+                keywordstyle=\color{blue}\ttfamily,
+                stringstyle=\color{red}\ttfamily,
+                commentstyle=\color{green}\ttfamily,
+                morecomment=[l][\color{magenta}]{\#},
+                frame=single,
+                keepspaces=true
+} 
+\maketitle 
+\begin{abstract}
+ A new class, called ReadTable, has been created in InterfacialCompositionModels/interfaceCompositionModels for reading from tables the saturation surface and return multilinearly interpolated values. The class can be used for calculating the liquid-gas phase equilibria in two-phase multicomponent systems. \\
+
+ {\em Note}: this documentation is not approved not endorsed by the OpenFOAM Foundation or by ESI Ltd, the owner of OpenFOAM\textsuperscript{\textregistered}.
+\end{abstract}
+
+\section{Lookup table}
+Input tables in binary format have to be created using the following loop order:  
+\begin{lstlisting}[gobble=3]
+    count = 0
+    for(i=0;i<Np+1;i++) // pressure loop
+    {
+      for(j=0;j<NT+1;j++)  // temperature loop
+      {
+        for(k=0;k<Nspecie1+1;k++)  // specie 1 loop
+        {
+          for(l=0;l<Nspecie2+1;l++) // specie 2 loop
+          {
+            [...]
+            //  call your programm for calculating the saturation surface
+            table_specie1[count] = myProgramm(p[i],T[j],specie1[k],specie2[l],...
+            table_specie2[count] = myProgramm(p[i],T[j],specie1[k],specie2[l],...
+            [...]
+            count += 1; 
+            [...]
+\end{lstlisting}
+It is worth noting that for one-component systems pressure and temperature only are needed, since the phase equilibria are independent of components. For multicomponent systems phase equilibria depend also on the number of components, hence the number of loops equals the number of species + pressure and temperature. 
+In the class constructor the tables are read and saved in the hash map {\ttfamily saturation}
+\begin{lstlisting}[gobble=3]
+    forAllConstIter(hashedWordList, this->speciesNames_, iter)
+    {
+      const label index = this->speciesNames_[*iter]; // specie number
+       
+      std::ifstream inFile(fileName_[index], std::ios::in | std::ios::binary);
+
+      std::vector<double> dataTable(N_[0]);
+
+      inFile.read(reinterpret_cast<char*>(&dataTable[0]), 
+                  dataTable.size()*sizeof(dataTable[0]));
+
+      int key = index;     
+      std::pair<int,std::vector<double>> key_values (key,dataTable);
+      saturation_.insert (key_values);
+
+      inFile.close();  
+    } 
+\end{lstlisting}
+{\ttfamily forAllConstIter} loops, for each phase, over all the components (i.e., species) identified by a number following the order used in \textit {phaseProperties}. The hash map {\ttfamily saturation} is populated using the specie number as key and the values read from specie table.
+
+\section{Interpolation}
+Interpolation is performed in the member function {\ttfamily Yf}
+\begin{lstlisting}
+template<class Thermo, class OtherThermo>
+Foam::tmp<Foam::volScalarField>
+Foam::interfaceCompositionModels::ReadTable<Thermo, OtherThermo>::Yf
+(
+    const word& speciesName,
+    const volScalarField& Tf
+) const
+{
+[...]
+}
+\end{lstlisting}
+
+In the following, the generalized equations for multilinear interpolation will be derived. 
+Bilinear interpolation is given by
+\begin{equation}
+\alpha_i \left[ \alpha_j \bold{S}_{i+1,j+1} + \left(1-\alpha_j\right)\bold{S}_{i+1,j}\right] +\left(1-\alpha_i\right) \left[ \alpha_j \bold{S}_{i,j+1} + \left(1-\alpha_j\right)\bold{S}_{i,j}\right].
+\end{equation}
+$\bold{S}$ is a $[N_x \ N_y]$ matrix storing the values of the function to be interpolated at given points $(x,y)$ . For a given pair of values $(\overline{x},\overline{y})$, with $\overline{x} \in [x_{min},x_{max}]$ and $\overline{y} \in [y_{min},y_{max}]$, the interpolation indexes, $i$ and $j$, are given by 
+\begin{eqnarray}
+i = \frac{\left(\overline{x}-x_{min}\right)}{\Delta x} = \frac{\left(\overline{x}-x_{min}\right)}{x_{max}-x_{min}}N_x,  \\ 
+j = \frac{\left(\overline{y}-y_{min}\right)}{\Delta y} = \frac{\left(\overline{y}-y_{min}\right)}{y_{max}-y_{min}}N_y 
+\end{eqnarray}
+The interpolation coefficients $\alpha_i$ and $\alpha_j$ $\in [0,1]$ are given by 
+\begin{eqnarray}\label{3}
+\alpha_i = \frac{\left(\overline{x}-x_i\right)}{x_{i+1}-x_i} \\
+\alpha_j = \frac{\left(\overline{y}-y_j\right)}{y_{j+1}-x_j}
+\end{eqnarray}
+Since 
+\begin{eqnarray}
+x_i = \frac{\left(x_{max}-x_{min}\right)}{N_x}i + x_{min} \\
+y_j = \frac{\left(y_{max}-y_{min}\right)}{N_y}j + y_{min}
+\end{eqnarray}
+the interpolation coefficients can be written as
+\begin{eqnarray}
+\alpha_i = \frac{N_x \overline{x} - N_x x_{min} -i\left(x_{max}-x_{min}\right)}{x_{max}-x_{min}} \\
+\alpha_i = \frac{N_y \overline{y} - N_y y_{min} -j\left(j_{max}-j_{min}\right)}{y_{max}-y_{min}}
+\end{eqnarray}
+
+Equations above can be generalized to a multilinear interpolation. To linearly interpolate a $N$ variable function, we define an [N X 2] index matrix $I$ and [N X 2] coefficient matrix $A$
+\begin{eqnarray}
+\bold{I} &=& \begin{bmatrix}
+       (1-\alpha_0) & \alpha_0           \\[0.3em]
+       . & .   \\[0.3em]
+       . & .   \\[0.3em]
+       . & .   \\[0.3em]
+       (1-\alpha_{N-1}) & \alpha_{N-1} \\         
+     \end{bmatrix}, \\
+     \bold{A} &=& \begin{bmatrix}
+       i & i+1            \\[0.3em]
+       . & .   \\[0.3em]
+       . & .   \\[0.3em]
+       . & .   \\[0.3em]
+       n & n+1
+       \end{bmatrix}, \\
+\end{eqnarray}
+\begin{lstlisting}[gobble=7]
+        // Lists of indexes (index matrix I)
+        PtrList<PtrList<volScalarField> > Index(yindex_0.size());   
+        // Lists of coefficients (coefficient matrix A) 
+        PtrList<PtrList<volScalarField> > Alpha(yindex_0.size());   
+
+        // set pressure index [0]
+        Index.set(0, new PtrList<volScalarField>(2));
+
+        Index[0].set // set i   [0][0]
+        (
+            0,
+            new volScalarField
+            (
+                IOobject
+                (
+                    "Index.pressure" ,
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                Np_[0]*(p - one_p*pmin_[0])/( one_p*pmax_[0] - one_p*pmin_[0] )
+            )
+        );
+
+        // correct internalField
+        forAll(Index[0][0],celli)
+        {
+            Index[0][0][celli] = floor(Index[0][0][celli]);
+        }   
+
+        Index[0].set // set (i+1)   [0][1]
+        (
+            1,
+            new volScalarField
+            (
+                IOobject
+                (
+                    "Index.pressure",
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                Index[0][0] + one_
+            )
+        );
+
+        // set pressure coefficients [0]
+        Alpha.set(0, new PtrList<volScalarField>(2));
+
+        Alpha[0].set // set (1-alpha)   [0][0]
+        (
+            0,
+            new volScalarField
+            (
+                IOobject
+                (
+                    "Alpha.pressure" ,
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                one_ - (Np_[0]*p - Np_[0]*one_p*pmin_[0] - 
+                one_p*(pmax_[0]-pmin_[0])*Index[0][0])/( one_p*(pmax_[0]-pmin_[0])) 
+            )
+        );
+
+        Alpha[0].set // set alpha   [0][1]
+        (
+            1,
+            new volScalarField
+            (
+                IOobject
+                (
+                    "Alpha.pressure",
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                (Np_[0]*p - Np_[0]*one_p*pmin_[0] - 
+                one_p*(pmax_[0]-pmin_[0])*Index[0][0])/( one_p*(pmax_[0]-pmin_[0]))
+            )
+        );
+
+        // set temperature index [1]
+        Index.set(1, new PtrList<volScalarField>(2));
+
+        Index[1].set // set i   [1][0]
+        (
+            0,
+            new volScalarField
+            (
+                IOobject
+                (
+                    "Index.temperature" ,
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                NT_[0]*(T - one_T*Tmin_[0])/( one_T*Tmax_[0] - one_T*Tmin_[0] )
+            )
+        );
+
+        // correct internalField
+        forAll(Index[1][0],celli)
+        {
+            Index[1][0][celli] = floor(Index[1][0][celli]);
+        }  
+
+        Index[1].set // set (i+1)   [1][1]
+        (
+            1,
+            new volScalarField
+            (
+                IOobject
+                (
+                    "Index.temperature",
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                Index[1][0] + one_
+            )
+        );
+
+        // set temperature coefficients [1]
+        Alpha.set(1, new PtrList<volScalarField>(2));
+
+        Alpha[1].set // set (1-alpha)   [1][0]
+        (
+            0,
+            new volScalarField
+            (
+                IOobject
+                (
+                    "Alpha.temperature" ,
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                one_ - (NT_[0]*T - NT_[0]*one_T*Tmin_[0] - 
+                one_T*(Tmax_[0]-Tmin_[0])*Index[1][0])/( one_T*(Tmax_[0]-Tmin_[0])) 
+            )
+        );
+
+        Alpha[1].set // set alpha   [1][1]
+        (
+            1,
+            new volScalarField
+            (
+                IOobject
+                (
+                    "Alpha.temperature",
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                (NT_[0]*T - NT_[0]*one_T*Tmin_[0] - 
+                one_T*(Tmax_[0]-Tmin_[0])*Index[1][0])/( one_T*(Tmax_[0]-Tmin_[0])) 
+            )
+        );
+
+        if( this->speciesNames_.size() > 1 )
+        {
+            // set coefficient for species
+            forAllConstIter(hashedWordList, this->speciesNames_, iter) 
+            {
+                const label indexList = this->speciesNames_[*iter]; 
+
+                // set species index [2:Nspecies-1]
+                Index.set(indexList+2, new PtrList<volScalarField>(2));
+ 
+                Index[indexList+2].set // set i   [indexList][0]
+                (
+                    0,
+                    new volScalarField
+                    (
+                        IOobject
+                        (
+                            "Index." + *iter,
+	                          this->pair_.phase1().time().timeName(),
+	                          this->pair_.phase1().mesh(),
+	                          IOobject::NO_READ,
+	                          IOobject::NO_WRITE
+                        ),
+                        Nspecie_[indexList]*( Yspecie[indexList] - 
+                        one_*speciemin_[indexList])/( one_*speciemax_[indexList] -
+                        one_*speciemin_[indexList] )
+                    )
+                );
+
+                // correct internalField
+                forAll(Index[indexList+2][0],celli)
+                {
+                    Index[indexList+2][0][celli] = floor(Index[indexList+2][0][celli]);
+                }  
+
+                Index[indexList+2].set // set (i+1)   [indexList][1]
+                (
+                    1,
+                    new volScalarField
+                    (
+                        IOobject
+                        (
+                            "Index." + *iter,
+	                          this->pair_.phase1().time().timeName(),
+	                          this->pair_.phase1().mesh(),
+	                          IOobject::NO_READ,
+	                          IOobject::NO_WRITE
+                        ),
+                        Index[indexList+2][0] + one_
+                    )
+                );
+
+                // set species coefficients [2:Nspecies-1]
+                Alpha.set(indexList+2, new PtrList<volScalarField>(2));
+ 
+                Alpha[indexList+2].set // set (1-alpha)   [indexList][0]
+                (
+                    0,
+                    new volScalarField
+                    (
+                        IOobject
+                        (
+                            "Alpha." + *iter,
+	                          this->pair_.phase1().time().timeName(),
+	                          this->pair_.phase1().mesh(),
+	                          IOobject::NO_READ,
+	                          IOobject::NO_WRITE
+                        ),
+                        one_ - (Nspecie_[indexList]*Yspecie[indexList] -
+                        Nspecie_[indexList]*one_*speciemin_[indexList] - 
+                        (speciemax_[indexList]-speciemin_[indexList])*
+                        Index[indexList+2][0])/
+                        (speciemax_[indexList]-speciemin_[indexList])
+                    )
+                );
+
+                Alpha[indexList+2].set // set alpha   [indexList][1]
+                (
+                    1,
+                    new volScalarField
+                    (
+                        IOobject
+                        (
+                            "Alpha." + *iter,
+	                          this->pair_.phase1().time().timeName(),
+	                          this->pair_.phase1().mesh(),
+	                          IOobject::NO_READ,
+	                          IOobject::NO_WRITE
+                        ),
+                        (Nspecie_[indexList]*Yspecie[indexList] -
+                         Nspecie_[indexList]*one_*speciemin_[indexList] - 
+                         (speciemax_[indexList]-speciemin_[indexList])*
+                         Index[indexList+2][0])/
+                         (speciemax_[indexList]-speciemin_[indexList])
+                    )
+                );
+
+            }
+        }
+
+\end{lstlisting}
+and a $[\mathrm{2^N \ X \ N}]$ matrix of the interpolation indexes $Y$. 
+\begin{eqnarray}
+\bold{Y} = \begin{bmatrix}
+       1 & 1 & 1 &. &. &.           \\[0.3em]
+       1 & 1 & 0 &. &. &.     \\[0.3em]
+       1 & 0 & 1 &. &. &.     \\[0.3em]
+       . & . & . &. &. &.    \\[0.3em] 
+       . & . & . &. &. &.    \\[0.3em]
+       . & . & . &. &. &.       
+     \end{bmatrix}. \\
+\end{eqnarray}
+The entries of $Y$ are calculated by a loop
+\begin{lstlisting}[gobble=3]
+    //- Define indexes for multilinear interpolation
+    if (  Nspecie_.size() == 1 )
+    {
+        // bilinear
+        int count = 1;
+        int tot_key = pow(2,Nspecie_.size()+2); 
+        for(int i=0;i<2;i++)
+        {
+            for(int j=0;j<2;j++)
+            {
+                // key [0,1,...,2^Nspecie )
+                // values [0,1,...,Nspecie) 
+                std::pair<int,std::vector<int>> key_values (tot_key-count,{i,j});
+                yindex_.insert(key_values);
+                count += 1;
+            } 
+        }
+    } 
+    else if (  Nspecie_.size() == 2 )
+    {
+        // quadrilinear
+        int count = 1;
+        int tot_key = pow(2,Nspecie_.size()+2); 
+        for(int i=0;i<2;i++)
+        {
+            for(int j=0;j<2;j++)
+            {
+                for(int k=0;k<2;k++)
+                {
+                    for(int l=0;l<2;l++)
+                    {
+                        std::pair<int,std::vector<int>> 
+                        key_values (tot_key-count,{i,j,k,l});
+                        
+                        yindex_.insert(key_values);
+                        count += 1;
+                    }
+                }
+            } 
+        }
+    } 
+\end{lstlisting} 
+In our case the variables of the interpolation function are pressure, temperature and the N components (i.e., species) defined in \textit {phaseProperties}.
+
+ 
+Multilinear interpolation is given by 
+\begin{eqnarray}
+\bold{A}_{0,\bold{Y}_{0,0}} \cdot \bold{A}_{1,\bold{Y}_{0,1}} \cdot ... \cdot \bold{A}_{N-1,\bold{Y}_{0,N-1}} \cdot \bold{S}_{\bold{I}_{0,\bold{Y}_{0,0}},...,I_{N-1,\bold{Y}_{0,N-1}}} + ... \\
+\bold{A}_{0,\bold{Y}_{2^N,0}} \cdot \bold{A}_{1,\bold{Y}_{2^N,1}} \cdot ... \cdot \bold{A}_{N-1,\bold{Y}_{2^N,N-1}} \cdot \bold{S}_{\bold{I}_{0,\bold{Y}_{2^N,0}},...,\bold{I}_{N-1,\bold{Y}_{2^N,N-1}}}
+\end{eqnarray}
+Since in the code the values in the lookup table \textit{saturation} are identified by a single index, representing a combination of N indexes, the tensor $\bold{S}$ has to redefined as a function of a single index, $k$
+\begin{eqnarray}
+\begin{cases} k_{0,l} = \bold{I}_{0,l}, \\ 
+k_{N,l} = k_{N-1} + \bold{I}_{N,l}\prod_{j=0}^{N-1} N_j \end{cases}
+\end{eqnarray}
+\begin{eqnarray}
+\bold{A}_{0,\bold{Y}_{0,0}} \cdot \bold{A}_{1,\bold{Y}_{0,1}} \cdot ... \cdot \bold{A}_{N-1,\bold{Y}_{0,N-1}} \cdot \bold{S}_{k_{N-1,\bold{Y}_{0,N-1}}} + ... \\
+\bold{A}_{0,\bold{Y}_{2^N,0}} \cdot \bold{A}_{1,\bold{Y}_{2^N,1}} \cdot ... \cdot \bold{A}_{N-1,\bold{Y}_{2^N,N-1}} \cdot \bold{S}_{k_{N-1,\bold{Y}_{2^N,N-1}}}
+\end{eqnarray}
+\begin{lstlisting}[gobble=7]
+        // interpolation
+
+        volScalarField F_lookup
+        (
+            IOobject
+            (
+                "F_lookup",
+	              this->pair_.phase1().time().timeName(),
+	              this->pair_.phase1().mesh(),
+	              IOobject::NO_READ,
+	              IOobject::NO_WRITE
+            ),
+            this->pair_.phase1().mesh(),
+            dimensionedScalar("F_lookup", dimensionSet(0,0,0,0,0,0,0), 0)
+        );
+
+        std::vector<int> Nvector(yindex_0.size()); // number of values for each variable
+        Nvector[0] = Np_[0]+1;
+        Nvector[1] = NT_[0]+1;
+        for (int j=2; j< yindex_0.size(); j++)
+        {
+            Nvector[j] = Nspecie_[j-2]+1;
+        }
+
+        int key = index; // index for specie
+        std::vector<double> saturation(saturation_.at(key)); // lookup table for specie     
+
+        // loop over interpolation terms (from 0 to 2^Nspecie)
+        for (int i=0;i<std::pow(2, yindex_0.size() );i++)
+        {
+             volScalarField Alpha_Pi
+            (
+                IOobject
+                (
+                    "Alpha_Pi",
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                this->pair_.phase1().mesh(),
+                dimensionedScalar("Alpha_Pi", dimensionSet(0,0,0,0,0,0,0), 1)
+            );
+
+            std::vector<int> yindex(yindex_.at(i)); 
+
+            // loop over variables (p, T, species)  to calculate alpha Pi
+            for (int j=0; j< yindex_0.size(); j++)
+            {    
+                Alpha_Pi = Alpha[j][yindex[j]]*Alpha_Pi;               
+            } 
+
+            // calculate single index for lookup table
+            volScalarField K
+            (
+                IOobject
+                (
+                    "K",
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                // initialize with value for last specie
+                Index[yindex_0.size()-1][yindex[yindex_0.size()-1]] 
+            );
+
+            for (int j=2; j<yindex_0.size()+1; j++)
+            {
+                int N_Pi = 1;
+                for (int k=1; k< j; k++)
+                { 
+                    // calculate N Pi     
+                    N_Pi = Nvector[yindex_0.size()-k]*N_Pi;
+                } 
+                K += Index[yindex_0.size()-j][yindex[yindex_0.size()-j]]*N_Pi;
+            }
+ 
+            // evaluate the ith interpolation term            
+            volScalarField F_lookup_last 
+            (
+                IOobject
+                (
+                    "F_lookup_last",
+	                  this->pair_.phase1().time().timeName(),
+	                  this->pair_.phase1().mesh(),
+	                  IOobject::NO_READ,
+	                  IOobject::NO_WRITE
+                ),
+                this->pair_.phase1().mesh(),
+                dimensionedScalar("F_lookup_last", dimensionSet(0,0,0,0,0,0,0), 1)
+            );
+            
+            forAll(K,celli)
+            { 
+                int kindx = K[celli];
+ 
+                F_lookup_last[celli] = Alpha_Pi[celli]*saturation[kindx];
+            }
+
+            // calculate iteratively the interpolation function for the specie               
+            F_lookup += F_lookup_last;  
+\end{lstlisting}          
+ 
+
+
+
+
+\end{document}
